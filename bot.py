@@ -1,6 +1,8 @@
 import hashlib
 import logging
 
+from functools import wraps
+
 from aiogram import executor, Bot, Dispatcher, types
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent  # INLINE MODE!
 
@@ -19,6 +21,22 @@ model_name = "Salavat/nllb-200-distilled-600M-finetuned-isv_v2"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = M2M100ForConditionalGeneration.from_pretrained(model_name)
 
+# Logging decorator
+def log_translation(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        input_text = args[0] if args else kwargs.get('input_text', 'No Input Provided')
+        logging.info(f"Translation input: {input_text}")
+        
+        result = await func(*args, **kwargs)
+        
+        logging.info(f"Translation output: {result}")
+        return result
+    return wrapper
+
+# Decorated translation function
+@log_translation
+
 async def translate_text(input_text: str) -> str:
     inputs = tokenizer(input_text, return_tensors="pt")
     output_ids = model.generate(inputs["input_ids"], max_length=150, num_beams=5, early_stopping=True)
@@ -27,7 +45,7 @@ async def translate_text(input_text: str) -> str:
 
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message) -> None:
-    await message.answer("Hi! I'm a bot translating texts into interslavic. I can work in inline_mode")
+    await message.answer("Pozdråv! Ja jesm bot, ktory prěkladjaje teksty na međuslovjansky. Ja mogu raditi v inline_modu")
 
 
 @dp.message_handler()
@@ -37,7 +55,7 @@ async def text_handler(message: types.Message) -> None:
 
 @dp.inline_handler()
 async def inline_echo(inline_query: types.InlineQuery) -> None:
-    text = inline_query.query or 'What do you want to translate?'
+    text = inline_query.query or 'Čto ty hćeš prěkladati?'
     translated_text = await translate_text(text)
     result_id: str = hashlib.md5(text.encode()).hexdigest()
     input_content = InputTextMessageContent(translated_text, parse_mode='html')
@@ -45,7 +63,7 @@ async def inline_echo(inline_query: types.InlineQuery) -> None:
     item = InlineQueryResultArticle(
         id=result_id,
         input_message_content=input_content,
-        title='Translated Text',
+        title='Prěkladany tekst',
         description=translated_text,
     )
 
