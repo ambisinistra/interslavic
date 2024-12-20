@@ -10,8 +10,16 @@ from transformers import AutoTokenizer, M2M100ForConditionalGeneration
 
 from api_token import API_TOKEN
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
+# Configure logging to display on screen and save to a file
+log_file = "translation_logs.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),  # Display logs on screen
+        logging.FileHandler(log_file, mode="a")  # Save logs to a file
+    ]
+)
 
 bot = Bot(API_TOKEN)
 dp = Dispatcher(bot)
@@ -26,11 +34,11 @@ def log_translation(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         input_text = args[0] if args else kwargs.get('input_text', 'No Input Provided')
-        logging.info(f"Translation input: {input_text}")
+        logging.info(f"Translation input >> {input_text}")
         
         result = await func(*args, **kwargs)
         
-        logging.info(f"Translation output: {result}")
+        logging.info(f"Translation output >> {result}")
         return result
     return wrapper
 
